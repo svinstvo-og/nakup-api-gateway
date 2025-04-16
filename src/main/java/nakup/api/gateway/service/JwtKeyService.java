@@ -2,8 +2,10 @@ package nakup.api.gateway.service;
 
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.ws.rs.client.Client;
 import lombok.Getter;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -14,16 +16,23 @@ import java.util.Base64;
 @Service
 public class JwtKeyService {
 
-    private String keyEncoded = "";
+    WebClient client = WebClient.create("http://localhost:8092");
+
+    String keyEncoded;
 
     JwtKeyService() throws NoSuchAlgorithmException {
-        KeyGenerator keyGenerator = KeyGenerator.getInstance("HmacSHA256");
-        SecretKey secretKey = keyGenerator.generateKey();
-        keyEncoded = Base64.getEncoder().encodeToString(secretKey.getEncoded());
+        keyEncoded = client.get()
+                .uri("/internal/jwt/key/encoded")
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 
-    public SecretKey getSecretKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(this.keyEncoded);
+    public SecretKey getSecretKey() throws RuntimeException {
+        if (keyEncoded == null) {
+            throw new RuntimeException("Key is null");
+        }
+        byte[] keyBytes = Decoders.BASE64.decode(keyEncoded);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

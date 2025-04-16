@@ -1,9 +1,11 @@
 package nakup.api.gateway.filter;
 
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import nakup.api.gateway.service.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -23,8 +25,8 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+//    @Autowired
+//    private UserDetailsService userDetailsService;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -40,17 +42,24 @@ public class JwtFilter extends OncePerRequestFilter {
             email = jwtService.extractEmail(token);
         }
 
-        if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (token != null) {
 
-            UserDetails userDetails = applicationContext.getBean(CustomUserDetailsService.class).loadUserByUsername(email);
+            Claims claims = jwtService.extractAllClaims(token);
 
-            if (jwtService.validateToken(token, userDetails)) {
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            request.setAttribute("email", email);
+            request.setAttribute("roles", claims.get("roles"));
 
-            }
+//
+//            if (jwtService.validateToken(token)) {
+//                UsernamePasswordAuthenticationToken authenticationToken =
+//                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+//                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+//                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+//
+//            }
+        }
+        else {
+            throw new ServletException("Invalid JWT token");
         }
         filterChain.doFilter(request, response);
     }
