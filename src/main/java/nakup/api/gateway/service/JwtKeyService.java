@@ -16,22 +16,9 @@ import java.util.Base64;
 @Service
 public class JwtKeyService {
 
-    WebClient client = WebClient.create("http://localhost:8092");
+    String keyEncoded = "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";
 
-    String keyEncoded;
-
-    JwtKeyService() throws NoSuchAlgorithmException {
-        keyEncoded = client.get()
-                .uri("/internal/jwt/key/encoded")
-                .retrieve()
-                .bodyToMono(String.class)
-                .block();
-    }
-
-    public SecretKey getSecretKey() throws RuntimeException {
-        if (keyEncoded == null) {
-            throw new RuntimeException("Key is null");
-        }
+    public SecretKey getSecretKey() {
         byte[] keyBytes = Decoders.BASE64.decode(keyEncoded);
         return Keys.hmacShaKeyFor(keyBytes);
     }
